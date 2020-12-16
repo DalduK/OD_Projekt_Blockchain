@@ -19,6 +19,7 @@ class Block:
         # Hash poprzedniego bloku w łańcuchu bloków
         self.previous_hash = previous_hash
         self.nonce = nonce
+        self.hash = None
 
     def compute_hash(self):
         # Zwraca hash bloku który reprezentowany jest jako JSON string
@@ -114,7 +115,7 @@ class Blockchain:
 
 
 blockchain = Blockchain()
-blockchain.create_genesis_block()
+# blockchain.create_genesis_block()
 
 peers = set()
 
@@ -155,7 +156,8 @@ def create_chain_from_dump(chain_dump):
         block = Block(block_data["index"],
                       block_data["transaction"],
                       block_data["timestamp"],
-                      block_data["previous_hash"])
+                      block_data["previous_hash"],
+                      block_data["nonce"])
         proof = block_data['hash']
         if idx > 0:
             added = blockchain.add_block(block, proof)
@@ -210,7 +212,9 @@ def verify_and_add_block():
     block = Block(block_data["index"],
                   block_data["transaction"],
                   block_data["timestamp"],
-                  block_data["previous_hash"])
+                  block_data["previous_hash"],
+                  block_data["nonce"])
+
     proof = block_data['hash']
     added = blockchain.add_block(block, proof)
 
@@ -232,7 +236,7 @@ def consensus():
     current_len = len(blockchain.chain)
 
     for node in peers:
-        response = requests.get('{}/chain'.format(node))
+        response = requests.get('{}chain'.format(node))
         length = response.json()['length']
         chain = response.json()['chain']
         if length > current_len and blockchain.check_chain_validity(chain):
