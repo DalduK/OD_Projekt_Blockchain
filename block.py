@@ -32,7 +32,6 @@ class Blockchain:
     def __init__(self):
         self.unconfirmed_transactions = []
         self.chain = []
-        self.create_genesis_block()
 
     def create_genesis_block(self):
         # funkcja która tworzy blok początkowy (genesis) i dodaje go do łacucha bloków,
@@ -115,7 +114,7 @@ class Blockchain:
 
 
 blockchain = Blockchain()
-# blockchain.create_genesis_block()
+blockchain.create_genesis_block()
 
 peers = set()
 
