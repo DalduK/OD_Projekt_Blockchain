@@ -115,7 +115,7 @@ class Blockchain:
 
 
 blockchain = Blockchain()
-# blockchain.create_genesis_block()
+blockchain.create_genesis_block()
 
 peers = set()
 
