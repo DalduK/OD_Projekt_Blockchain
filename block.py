@@ -187,7 +187,7 @@ def get_chain():
     chain_data = []
     for block in blockchain.chain:
         chain_data.append(block.__dict__)
-    return json.dumps({"length": len(chain_data), "chain": chain_data})
+    return json.dumps({"length": len(chain_data), "chain": chain_data, "peers": list(peers)})
 
 @app.route('/miner', methods=['GET'])
 def mine_unconfirmed_transactions():
@@ -247,4 +247,4 @@ def consensus():
     return False
 
 if __name__ == "__main__":
-    app.run(threaded=True, port=5000)
+    app.run(threaded=True, port=8000)
