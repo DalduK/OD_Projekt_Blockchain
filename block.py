@@ -19,7 +19,6 @@ class Block:
         # Hash poprzedniego bloku w łańcuchu bloków
         self.previous_hash = previous_hash
         self.nonce = nonce
-        self.hash = None
 
     def compute_hash(self):
         # Zwraca hash bloku który reprezentowany jest jako JSON string
@@ -108,16 +107,15 @@ class Blockchain:
                 result = False
                 break
             block.hash, previous_hash = block_hash, block_hash
+
         return result
-
-
-
 
 
 blockchain = Blockchain()
 blockchain.create_genesis_block()
 
 peers = set()
+
 
 @app.route('/register_node', methods=['POST'])
 def register_new_peers():
@@ -128,6 +126,7 @@ def register_new_peers():
     peers.add(node_address)
 
     return get_chain()
+
 
 @app.route('/register_with', methods=['POST'])
 def register_with_existing_node():
@@ -150,23 +149,23 @@ def register_with_existing_node():
     else:
         return response.content, response.status_code
 
+
 def create_chain_from_dump(chain_dump):
-    blockchain = Blockchain()
+    generated_blockchain = Blockchain()
+    generated_blockchain.create_genesis_block()
     for idx, block_data in enumerate(chain_dump):
+        if idx == 0:
+            continue
         block = Block(block_data["index"],
                       block_data["transaction"],
                       block_data["timestamp"],
                       block_data["previous_hash"],
                       block_data["nonce"])
         proof = block_data['hash']
-        if idx > 0:
-            added = blockchain.add_block(block, proof)
-            if not added:
-                raise Exception("The chain dump is tampered!!")
-        else:
-            #w tym wypadku blok to blok początkowy, potwierdzenie nie jest potrzebne
-            blockchain.chain.append(block)
-    return blockchain
+        added = generated_blockchain.add_block(block, proof)
+        if not added:
+            raise Exception("The chain dump is tampered!!")
+    return generated_blockchain
 
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
@@ -249,5 +248,5 @@ def consensus():
 
     return False
 
-if __name__ == "__main__":
-    app.run(threaded=True, port=8000)
+# if __name__ == "__main__":
+#     app.run(threaded=True, port=8001)
