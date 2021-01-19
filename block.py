@@ -36,7 +36,7 @@ class Blockchain:
     def create_genesis_block(self):
         # funkcja która tworzy blok początkowy (genesis) i dodaje go do łacucha bloków,
         # Blok posiada indeks 0, a hash poprzedniego bloku również ustawionu jest jako 0
-        genesis_block = Block(0, [], time.time(), "0")
+        genesis_block = Block(0, [], 0, "0")
         genesis_block.hash = genesis_block.compute_hash()
         self.chain.append(genesis_block)
 
@@ -116,7 +116,7 @@ blockchain.create_genesis_block()
 
 peers = set()
 
-
+#TODO Broadcasting peers
 @app.route('/register_node', methods=['POST'])
 def register_new_peers():
     node_address = request.get_json()["node_address"]
@@ -166,9 +166,26 @@ def create_chain_from_dump(chain_dump):
         if not added:
             raise Exception("The chain dump is tampered!!")
     return generated_blockchain
+# ###################################
 
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
+    tx_data = request.get_json()
+    required_fields = ["ID", "Money", "Description"]
+
+    for field in required_fields:
+        if not tx_data.get(field):
+            return "Invalid transaction data", 404
+
+    tx_data["timestamp"] = time.time()
+
+    blockchain.add_new_transaction(tx_data)
+    announce_new_block_to_mine(tx_data)
+
+    return "Success", 201
+
+@app.route('/share_transaction', methods=['POST'])
+def share_transaction():
     tx_data = request.get_json()
     required_fields = ["ID", "Money", "Description"]
 
@@ -189,6 +206,7 @@ def get_chain():
         chain_data.append(block.__dict__)
     return json.dumps({"length": len(chain_data), "chain": chain_data, "peers": list(peers)})
 
+#TODO Sharing info what block has been mined
 @app.route('/miner', methods=['GET'])
 def mine_unconfirmed_transactions():
     result = blockchain.mine()
@@ -200,6 +218,7 @@ def mine_unconfirmed_transactions():
         if chain_length == len(blockchain.chain):
             announce_new_block(blockchain.last_block)
         return "Block #{} is mined.".format(blockchain.last_block.index)
+##############
 
 @app.route('/pending_tx')
 def get_pending_tx():
@@ -228,6 +247,13 @@ def announce_new_block(block):
         headers= {'Content-Type': "application/json"}
         requests.post(url, data=json.dumps(block.__dict__, sort_keys=True), headers=headers)
 
+def announce_new_block_to_mine(tx_data):
+    print(peers)
+    for peer in peers:
+        url = "{}share_transaction".format(peer)
+        headers= {'Content-Type': "application/json"}
+        requests.post(url, data=json.dumps(tx_data, sort_keys=True), headers=headers)
+
 def consensus():
     global blockchain
 
@@ -248,5 +274,5 @@ def consensus():
 
     return False
 
-# if __name__ == "__main__":
-#     app.run(threaded=True, port=8001)
+if __name__ == "__main__":
+    app.run(threaded=True, port=8001)
