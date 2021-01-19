@@ -187,13 +187,11 @@ def new_transaction():
 @app.route('/share_transaction', methods=['POST'])
 def share_transaction():
     tx_data = request.get_json()
-    required_fields = ["ID", "Money", "Description"]
+    required_fields = ["ID", "Money", "Description", "timestamp"]
 
     for field in required_fields:
         if not tx_data.get(field):
             return "Invalid transaction data", 404
-
-    tx_data["timestamp"] = time.time()
 
     blockchain.add_new_transaction(tx_data)
 
@@ -206,7 +204,6 @@ def get_chain():
         chain_data.append(block.__dict__)
     return json.dumps({"length": len(chain_data), "chain": chain_data, "peers": list(peers)})
 
-#TODO Sharing info what block has been mined
 @app.route('/miner', methods=['GET'])
 def mine_unconfirmed_transactions():
     result = blockchain.mine()
@@ -218,7 +215,6 @@ def mine_unconfirmed_transactions():
         if chain_length == len(blockchain.chain):
             announce_new_block(blockchain.last_block)
         return "Block #{} is mined.".format(blockchain.last_block.index)
-##############
 
 @app.route('/pending_tx')
 def get_pending_tx():
@@ -232,7 +228,11 @@ def verify_and_add_block():
                   block_data["timestamp"],
                   block_data["previous_hash"],
                   block_data["nonce"])
-
+    dict = block_data["transaction"]
+    for d in dict:
+        for i in blockchain.unconfirmed_transactions:
+            if d["timestamp"] == i["timestamp"]:
+                blockchain.unconfirmed_transactions.remove(i)
     proof = block_data['hash']
     added = blockchain.add_block(block, proof)
 
