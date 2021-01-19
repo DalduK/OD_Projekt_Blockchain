@@ -133,6 +133,7 @@ def register_with_existing_node():
     node_address = request.get_json()["node_address"]
     if not node_address:
         return "Invalid data", 400
+    print(type(node_address))
     data = {"node_address": request.host_url}
     headers = {'Content-Type': "application/json"}
 
@@ -144,7 +145,8 @@ def register_with_existing_node():
         #aktualizacja łańcucha i peerów
         chain_dump = response.json()['chain']
         blockchain = create_chain_from_dump(chain_dump)
-        peers.update(response.json()['peers'])
+        print(response.json()['peers'])
+        peers.add(node_address+"/")
         return "Registration succesful", 200
     else:
         return response.content, response.status_code
