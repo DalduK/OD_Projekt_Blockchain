@@ -117,13 +117,78 @@ blockchain.create_genesis_block()
 peers = set()
 
 #TODO Broadcasting peers
+# @app.route('/register_node', methods=['POST'])
+# def register_new_peers():
+#     node_address = request.get_json()["node_address"]
+#     for i in node_address:
+#         if not i:
+#             return "Invalid data", 400
+#         if i != request.host_url:
+#             peers.add(i)
+#
+#     dict_peers = {}
+#     dict_peers["node_addresses"] = list(peers)
+#     announce_new_peers(dict_peers)
+#
+#     return get_chain()
+#
+#
+# @app.route('/register_with', methods=['POST'])
+# def register_with_existing_node():
+#     node_address = request.get_json()["node_address"]
+#     global peers
+#     if not node_address:
+#         return "Invalid data", 400
+#     temp = []
+#     for i in peers:
+#         temp.append(i)
+#     temp.append(request.host_url)
+#     data = {"node_address": temp}
+#     headers = {'Content-Type': "application/json"}
+#
+#     response = requests.post(node_address + "/register_node",
+#                              data=json.dumps(data), headers=headers)
+#     if response.status_code == 200:
+#         global blockchain
+#
+#         #aktualizacja łańcucha i peerów
+#         chain_dump = response.json()['chain']
+#         prob_peers = response.json()['peers']
+#         blockchain = create_chain_from_dump(chain_dump)
+#         print(response.json()['peers'])
+#         peers.add(node_address+"/")
+#         for i in prob_peers:
+#             if i != request.host_url:
+#                 peers.add(i)
+#         return "Registration succesful", 200
+#     else:
+#         return response.content, response.status_code
+
 @app.route('/register_node', methods=['POST'])
 def register_new_peers():
     node_address = request.get_json()["node_address"]
+    sender = request.get_json()["sender"]
+    ttl = int(request.get_json()["ttl"]) - 1
     if not node_address:
         return "Invalid data", 400
+    print('ADRESSS ', node_address)
+    if node_address != request.host_url:
+        peers.add(node_address)
+    if sender != request.host_url:
+        peers.add(sender)
 
-    peers.add(node_address)
+    if ttl > 0:
+        data = {"node_address": node_address,
+                "sender": request.host_url,
+                "ttl": ttl}
+        headers = {'Content-Type': "application/json"}
+
+        for peer in peers.copy():
+            print(ttl)
+            print(data)
+            response = requests.post(peer + "/register_node",
+                                     data=json.dumps(data), headers=headers)
+            print(response)
 
     return get_chain()
 
@@ -133,8 +198,10 @@ def register_with_existing_node():
     node_address = request.get_json()["node_address"]
     if not node_address:
         return "Invalid data", 400
-    print(type(node_address))
-    data = {"node_address": request.host_url}
+    # print(type(node_address))
+    data = {"node_address": request.host_url,
+            "sender": request.host_url,
+            "ttl": 3}
     headers = {'Content-Type': "application/json"}
 
     response = requests.post(node_address + "/register_node",
@@ -142,7 +209,6 @@ def register_with_existing_node():
     if response.status_code == 200:
         global blockchain
         global peers
-        #aktualizacja łańcucha i peerów
         chain_dump = response.json()['chain']
         blockchain = create_chain_from_dump(chain_dump)
         print(response.json()['peers'])
@@ -151,6 +217,36 @@ def register_with_existing_node():
     else:
         return response.content, response.status_code
 
+@app.route('/announce_peers', methods=['POST'])
+def send_added_peers():
+    node_address = request.get_json()["node_addresses"]
+    for i in node_address:
+        for j in peers.copy():
+            if i != j and i != request.host_url:
+                peers.add(i)
+            else:
+                continue
+    return "Registration succesful", 200
+
+@app.route('/announce_leave', methods=['POST'])
+def send_leave():
+    node_add = request.get_json()["node_address"]
+    print(node_add)
+    print(peers)
+    if not node_add:
+        return "invalid data", 400
+    peers.remove(node_add)
+    return "success", 200
+
+@app.route('/leave', methods=['GET'])
+def get_leave():
+    for i in peers.copy():
+        url = "{}announce_leave".format(i)
+        headers = {'Content-Type': "application/json"}
+        dict = {"node_address": request.host_url}
+        requests.post(url, data=json.dumps(dict, sort_keys=True), headers=headers)
+        peers.remove(i)
+    return "Success", 200
 
 def create_chain_from_dump(chain_dump):
     generated_blockchain = Blockchain()
@@ -250,11 +346,21 @@ def announce_new_block(block):
         requests.post(url, data=json.dumps(block.__dict__, sort_keys=True), headers=headers)
 
 def announce_new_block_to_mine(tx_data):
-    print(peers)
     for peer in peers:
         url = "{}share_transaction".format(peer)
         headers= {'Content-Type': "application/json"}
         requests.post(url, data=json.dumps(tx_data, sort_keys=True), headers=headers)
+
+def announce_new_peers(tx_data):
+    for peer in peers:
+        url = "{}announce_peers".format(peer)
+        headers= {'Content-Type': "application/json"}
+        requests.post(url, data=json.dumps(tx_data, sort_keys=True), headers=headers)
+
+def send_own_peers(tx_data, peer):
+    url = "{}announce_peers".format(peer)
+    headers= {'Content-Type': "application/json"}
+    requests.post(url, data=json.dumps(tx_data, sort_keys=True), headers=headers)
 
 def consensus():
     global blockchain
