@@ -116,25 +116,64 @@ blockchain.create_genesis_block()
 
 peers = set()
 
-#TODO Broadcasting peers
+
+def shutdown_server():
+    func = request.environ.get('werkzeug.server.shutdown')
+    if func is None:
+        raise RuntimeError('Not running with the Werkzeug Server')
+    func()
+
+
+@app.route('/shutdown', methods=['GET'])
+def shutdown():
+    shutdown_server()
+    return 'Server shutting down...'
+
+
 @app.route('/register_node', methods=['POST'])
 def register_new_peers():
-    node_address = request.get_json()["node_address"]
-    if not node_address:
+    sender = request.get_json()["sender"]
+    if not sender:
         return "Invalid data", 400
+    print('ADRESSS, SENDER, HOST ', sender, request.host_url)
+    if sender != request.host_url:
+        peers.add(sender)
+    headers = {'Content-Type': "application/json"}
 
-    peers.add(node_address)
-
+    for peer in peers.copy():
+        data = {"node_address": peer,
+                "sender": request.host_url,
+                "ttl": 3}
+        response = requests.post(sender + "/share_nodes", data=json.dumps(data), headers=headers)
     return get_chain()
+
+
+@app.route('/share_nodes', methods=['POST'])
+def share_nodes():
+    node = request.get_json()["node_address"]
+    sender = request.get_json()["sender"]
+    headers = {'Content-Type': "application/json"}
+    if sender != request.host_url:
+        peers.add(sender)
+    if node != request.host_url:
+        peers.add(node)
+    ttl = int(request.get_json()["ttl"]) - 1
+    if ttl > 0:
+        for peer in peers.copy():
+            data = {"node_address": peer,
+                    "sender": request.host_url,
+                    "ttl": ttl}
+            response = requests.post(node + "/share_nodes", data=json.dumps(data), headers=headers)
+    return "Success", 200
 
 
 @app.route('/register_with', methods=['POST'])
 def register_with_existing_node():
     node_address = request.get_json()["node_address"]
     if not node_address:
-        return "Invalid data", 400
-    print(type(node_address))
-    data = {"node_address": request.host_url}
+        return "Invalid data or already registered", 400
+    # print(type(node_address))
+    data = {"sender": request.host_url}
     headers = {'Content-Type': "application/json"}
 
     response = requests.post(node_address + "/register_node",
@@ -142,14 +181,29 @@ def register_with_existing_node():
     if response.status_code == 200:
         global blockchain
         global peers
-        #aktualizacja łańcucha i peerów
         chain_dump = response.json()['chain']
         blockchain = create_chain_from_dump(chain_dump)
-        print(response.json()['peers'])
-        peers.add(node_address+"/")
+        chain = {"chain": chain_dump}
+        for peer in peers.copy():
+            if peer is not node_address:
+                print(node_address, "->", peer)
+                data = {"node_address": node_address,
+                        "sender": request.host_url,
+                        "ttl": 3}
+                response = requests.post(peer + "/share_nodes", data=json.dumps(data), headers=headers)
+                response = requests.post(peer + "/chain_dump", data=json.dumps(chain), headers=headers)
+
+        peers.add(node_address)
         return "Registration succesful", 200
     else:
         return response.content, response.status_code
+
+@app.route('/chain_dump', methods=['POST'])
+def send_chain_to_peers():
+    global blockchain
+    chain = request.get_json()["chain"]
+    blockchain = create_chain_from_dump(chain)
+    return "Success", 200
 
 
 def create_chain_from_dump(chain_dump):
@@ -168,12 +222,11 @@ def create_chain_from_dump(chain_dump):
         if not added:
             raise Exception("The chain dump is tampered!!")
     return generated_blockchain
-# ###################################
 
 @app.route('/new_transaction', methods=['POST'])
 def new_transaction():
     tx_data = request.get_json()
-    required_fields = ["ID", "Money", "Description"]
+    required_fields = ["Organisation", "Money", "Description"]
 
     for field in required_fields:
         if not tx_data.get(field):
@@ -189,7 +242,7 @@ def new_transaction():
 @app.route('/share_transaction', methods=['POST'])
 def share_transaction():
     tx_data = request.get_json()
-    required_fields = ["ID", "Money", "Description", "timestamp"]
+    required_fields = ["Organisation", "Money", "Description", "timestamp"]
 
     for field in required_fields:
         if not tx_data.get(field):
