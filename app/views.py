@@ -8,7 +8,7 @@ from app import app
 
 # The node with which our application interacts, there can be multiple
 # such nodes as well.
-CONNECTED_NODE_ADDRESS = "http://127.0.0.1:8001"
+CONNECTED_NODE_ADDRESS = "http://127.0.0.1:8004"
 
 posts = []
 
@@ -39,7 +39,7 @@ def fetch_posts():
 def index():
     fetch_posts()
     return render_template('index.html',
-                           title='Albicla: Let\'s All Be Clear',
+                           title='PIPa - Państwowa informacja publiczna',
                            posts=posts,
                            node_address=CONNECTED_NODE_ADDRESS,
                            readable_time=timestamp_to_string)
@@ -47,3 +47,4 @@ def index():
 
 def timestamp_to_string(epoch_time):
     return datetime.datetime.fromtimestamp(epoch_time).strftime('%H:%M')
+

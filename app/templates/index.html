@@ -2,28 +2,43 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+    <script>
+    function httpGet(theUrl)
+        {
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.open( "GET", "{{ node_address }}/miner", false ); // false for synchronous request
+            xmlHttp.send( null );
+            return xmlHttp.responseText;
+        }
+    </script>
 	<br>
 
 	<br>
-
-	<a href="{{node_address}}/miner" target="_blank"><button>Request to mine</button></a>
-	<a href="/"><button>Resync</button></a>
+    <div class="text-center">
+	<a href="/"><button type="button" class="btn btn-success" onclick="httpGet()">Zarządaj wykopania i odśwież stronę</button></a>
+    </div>
+{#	<button type="button" class="btn btn-success">Resync</button>#}
 
 	<div style="margin: 20px;">
 
     {% for post in posts %}
-    <div class="post_box">
-	   <div class="post_box-header">
-	      <div class="name-header">{{post.Organisation}}</div>
-	      <div class="post_box-subtitle"> Dodano <i>{{readable_time(post.timestamp)}}</i></div>
-	   </div>
-	   <div>
-	      <div class="post_box-body">
-	         <p>Opis: {{post.Description}}</p>
-	         <p>Kwota: {{post.Money}}</p>
-	      </div>
-	   </div>
-	</div>
+    <div class="padding-example-2">
+    <div class="card" >
+      <div class="card-header">{{readable_time(post.timestamp)}}</div>
+      <div class="card-body">
+        <blockquote class="blockquote mb-0">
+          <p>
+            {{post.Description}}
+          </p>
+            <p>Kwota: {{post.Money}}</p>
+          <footer class="blockquote-footer">
+            {{post.Organisation}}
+          </footer>
+        </blockquote>
+      </div>
+    </div>
+    </div>
 	{% endfor %}
 
 	<style>
