@@ -18,13 +18,13 @@ export FLASK_APP=block.py
 flask run --port 8004
 ```
 Jeśli chcemy odpalić większą ilość peerów należy wykonać komendy w następujący sposób.
-``bash
+```bash
 export FLASK_APP=block.py
 #uruchamia 3 instancje, na portach 8004, 8005, 8006
 flask run --port 8004 &flask run --port 8005 &flask run --port 8006 
 ```
 Jeśli chcemy połączyć peerów w sieć wykonujemy następującą komendę
-``bash
+```bash
 #przykład dla połączenia adresu 8004 z adresem 8005.
 curl -X POST \                              
   http://127.0.0.1:8004/register_with \
