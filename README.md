@@ -48,6 +48,4 @@ flask run --port 8009
 Przykładowy wygląd strony
 ![alt text](https://github.com/DalduK/OD_Projekt_Blockchain/blob/master/Screenshot.png?raw=true)
 
-## Licencja
-[MIT](https://choosealicense.com/licenses/mit/)
 
